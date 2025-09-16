@@ -64,12 +64,20 @@
       # Git is already included in systemPackages
       # Git configuration can be done through ~/.gitconfig or environment variables
 
-      # Set Warp as default terminal application
+      # Set Warp as default terminal application and Chrome as default browser
       system.activationScripts.setDefaultTerminal = ''
         # Set Warp as default terminal
         defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers -array-add '{LSHandlerContentType=public.unix-executable;LSHandlerRoleAll=com.warp.Warp;}'
         defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers -array-add '{LSHandlerURLScheme=ssh;LSHandlerRoleAll=com.warp.Warp;}'
         defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers -array-add '{LSHandlerURLScheme=ssh+file;LSHandlerRoleAll=com.warp.Warp;}'
+        
+        # Set Chrome as default browser
+        defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers -array-add '{LSHandlerContentType=public.html;LSHandlerRoleAll=com.google.Chrome;}'
+        defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers -array-add '{LSHandlerContentType=public.xhtml;LSHandlerRoleAll=com.google.Chrome;}'
+        defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers -array-add '{LSHandlerURLScheme=http;LSHandlerRoleAll=com.google.Chrome;}'
+        defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers -array-add '{LSHandlerURLScheme=https;LSHandlerRoleAll=com.google.Chrome;}'
+        defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers -array-add '{LSHandlerURLScheme=ftp;LSHandlerRoleAll=com.google.Chrome;}'
+        defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers -array-add '{LSHandlerURLScheme=ftps;LSHandlerRoleAll=com.google.Chrome;}'
         
         # Refresh Launch Services
         /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -kill -r -domain local -domain system -domain user
@@ -108,6 +116,9 @@
           fi
         done
         
+        # Wait for symlinks to be created
+        sleep 2
+        
         echo "Configuring dock applications..."
         
         # Configure dock directly with the exact commands that work
@@ -119,26 +130,41 @@
         sudo -u carolinepellet defaults write com.apple.dock persistent-apps -array
         sudo -u carolinepellet defaults write com.apple.dock persistent-others -array
         
-        echo "Adding all applications to dock in one command..."
-        sudo -u carolinepellet bash -c '
-          defaults write com.apple.dock persistent-apps -array-add "<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/System/Applications/System Settings.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>" && 
-          defaults write com.apple.dock persistent-apps -array-add "<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Google Chrome.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>" && 
-          defaults write com.apple.dock persistent-apps -array-add "<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Warp.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>" && 
-          defaults write com.apple.dock persistent-apps -array-add "<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Cursor.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>" && 
-          defaults write com.apple.dock persistent-apps -array-add "<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Slack.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>" && 
-          defaults write com.apple.dock persistent-apps -array-add "<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Teams.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>" && 
-          defaults write com.apple.dock persistent-apps -array-add "<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Postman.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>"
-        '
+        # Wait for user session to be ready
+        sleep 3
+        
+        echo "Setting dock applications..."
+        # Set all dock apps at once to avoid duplicates
+        sudo -u carolinepellet defaults write com.apple.dock persistent-apps -array \
+          '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/System/Applications/System Settings.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>' \
+          '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Google Chrome.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>' \
+          '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Warp.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>' \
+          '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Cursor.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>' \
+          '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Slack.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>' \
+          '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Teams.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>' \
+          '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Postman.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>'
+        
+        echo "Dock applications configured"
+        
+        
+        # Wait a moment for all commands to complete
+        sleep 1
         
         echo "Restarting dock..."
         sudo -u carolinepellet killall Dock
         
-        echo "Verifying dock configuration..."
+        echo "Waiting for dock to restart..."
+        sleep 3
+        
+        
+        echo "Final verification..."
         sleep 2
-        sudo -u carolinepellet defaults read com.apple.dock persistent-apps | grep -c "_CFURLString" || echo "Warning: Dock configuration may not have applied"
+        echo "Apps in dock: $(sudo -u carolinepellet defaults read com.apple.dock persistent-apps | grep -c '_CFURLString')"
+        sudo -u carolinepellet defaults read com.apple.dock persistent-apps | grep '_CFURLString' | grep -o '/[^"]*' | sort
         
         echo "Custom applications setup complete!"
       '';
+
 
       system.defaults = {
         dock.autohide = true;
