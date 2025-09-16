@@ -17,7 +17,7 @@
         pkgs.lazygit # Git TUI
         pkgs.pyenv # Python version manager
         pkgs.gh # GitHub CLI
-        pkgs.bitwarden-cli # Bitwarden CLI
+        # pkgs.bitwarden-cli # Bitwarden CLI (currently broken)
         pkgs.kubectl # Kubernetes CLI
         pkgs.curl # Command line tool for transferring data with URL syntax
         pkgs.asdf # asdf version manager
@@ -34,8 +34,7 @@
       # allowUnfree is required to install some packages that are not "free" software.
       nixpkgs.config.allowUnfree = true;
 
-      # Auto upgrade nix package and the daemon service.
-      services.nix-daemon.enable = true;
+      # nix-daemon is now managed automatically by nix-darwin
       # nix.package = pkgs.nix;
 
       # Necessary for using flakes on this system.
@@ -62,23 +61,8 @@
       environment.variables.EDITOR = "cursor";
       environment.variables.VISUAL = "cursor";
 
-      programs.git = {
-        enable = true;
-        config = {
-          credential.helper = "osxkeychain";
-          "merge.nom-merge-driver.name" = "automatically merge npm lockfiles";
-          "merge.nom-merge-driver.driver" = "npx npm-merge-driver merge %A %O %B %P";
-          core.autocrlf = "input";
-          "alias.joli" = "log --oneline --graph";
-          "alias.co" = "checkout";
-          "alias.sw" = "switch";
-          "alias.br" = "branch";
-          "alias.com" = "commit";
-          "http.sslverify" = false;
-          "rerere.enabled" = true;
-          "init.defaultbranch" = "main";
-        };
-      };
+      # Git is already included in systemPackages
+      # Git configuration can be done through ~/.gitconfig or environment variables
 
       # Set Warp as default terminal application
       system.activationScripts.setDefaultTerminal = ''
@@ -98,13 +82,71 @@
       # $ darwin-rebuild changelog
       system.stateVersion = 4;
 
+      # Set the primary user for system defaults
+      system.primaryUser = "carolinepellet";
+
+      # Fix nixbld group GID conflict
+      ids.gids.nixbld = 350;
+
+      # Create symlinks for applications in /Applications/ and configure dock
+      system.activationScripts.postActivation.text = ''
+        echo "Setting up custom applications..."
+        
+        # Create symlinks from /Applications/Nix Apps/ to /Applications/
+        echo "Creating application symlinks..."
+        for app in "/Applications/Nix Apps/"*.app; do
+          if [ -d "$app" ]; then
+            app_name=$(basename "$app")
+            target="/Applications/$app_name"
+            if [ ! -e "$target" ] || [ -L "$target" ]; then
+              rm -f "$target"  # Remove existing symlink if it exists
+              ln -sf "$app" "$target"
+              echo "Created symlink: $target -> $app"
+            else
+              echo "Skipping $app_name (non-symlink file exists)"
+            fi
+          fi
+        done
+        
+        echo "Configuring dock applications..."
+        
+        # Configure dock directly with the exact commands that work
+        echo "Clearing existing dock configuration..."
+        sudo -u carolinepellet defaults delete com.apple.dock persistent-apps 2>/dev/null || true
+        sudo -u carolinepellet defaults delete com.apple.dock persistent-others 2>/dev/null || true
+        
+        echo "Creating new dock configuration..."
+        sudo -u carolinepellet defaults write com.apple.dock persistent-apps -array
+        sudo -u carolinepellet defaults write com.apple.dock persistent-others -array
+        
+        echo "Adding all applications to dock in one command..."
+        sudo -u carolinepellet bash -c '
+          defaults write com.apple.dock persistent-apps -array-add "<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/System/Applications/System Settings.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>" && 
+          defaults write com.apple.dock persistent-apps -array-add "<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Google Chrome.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>" && 
+          defaults write com.apple.dock persistent-apps -array-add "<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Warp.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>" && 
+          defaults write com.apple.dock persistent-apps -array-add "<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Cursor.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>" && 
+          defaults write com.apple.dock persistent-apps -array-add "<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Slack.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>" && 
+          defaults write com.apple.dock persistent-apps -array-add "<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Teams.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>" && 
+          defaults write com.apple.dock persistent-apps -array-add "<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Postman.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>"
+        '
+        
+        echo "Restarting dock..."
+        sudo -u carolinepellet killall Dock
+        
+        echo "Verifying dock configuration..."
+        sleep 2
+        sudo -u carolinepellet defaults read com.apple.dock persistent-apps | grep -c "_CFURLString" || echo "Warning: Dock configuration may not have applied"
+        
+        echo "Custom applications setup complete!"
+      '';
+
       system.defaults = {
         dock.autohide = true;
         dock.mru-spaces = false; # Most Recently Used spaces.
         dock.show-recents = false; # Hide recent applications
         dock.tilesize = 48; # Size of dock icons (default is 64)
         dock.magnification = true; # Enable magnification on hover
-        dock.magnification-size = 64; # Size when magnified
+        dock.largesize = 64; # Size when magnified
         dock.orientation = "bottom"; # bottom, left, right
         dock.showhidden = false; # Don't show hidden apps
         finder.AppleShowAllExtensions = true;
@@ -122,38 +164,6 @@
         };
       };
 
-      # Configure dock applications
-      system.activationScripts.dockApps = ''
-        # Clear existing dock items
-        defaults write com.apple.dock persistent-apps -array
-
-        # Add applications to dock (in order)
-        defaults write com.apple.dock persistent-apps -array-add '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/System Preferences.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>'
-        defaults write com.apple.dock persistent-apps -array-add '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Google Chrome.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>'
-        defaults write com.apple.dock persistent-apps -array-add '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Utilities/Terminal.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>'
-        defaults write com.apple.dock persistent-apps -array-add '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Utilities/Activity Monitor.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>'
-        defaults write com.apple.dock persistent-apps -array-add '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Warp.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>'
-        defaults write com.apple.dock persistent-apps -array-add '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Cursor.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>'
-
-        # Add spacer (separator)
-        defaults write com.apple.dock persistent-apps -array-add '<dict><key>tile-type</key><string>spacer-tile</string></dict>'
-
-        # Add Slack
-        defaults write com.apple.dock persistent-apps -array-add '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Slack.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>'
-
-        # Add Teams
-        defaults write com.apple.dock persistent-apps -array-add '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Microsoft Teams.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>'
-
-        # Add spacer (separator)
-        defaults write com.apple.dock persistent-apps -array-add '<dict><key>tile-type</key><string>spacer-tile</string></dict>'
-
-        # Add folders to dock
-        defaults write com.apple.dock persistent-others -array-add '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>file:///Users/$USER/Downloads</string><key>_CFURLStringType</key><integer>15</integer></dict><key>file-label</key><string>Downloads</string><key>file-type</key><integer>2</integer></dict><key>tile-type</key><string>directory-tile</string></dict>'
-        defaults write com.apple.dock persistent-others -array-add '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>file:///Applications</string><key>_CFURLStringType</key><integer>15</integer></dict><key>file-label</key><string>Applications</string><key>file-type</key><integer>2</integer></dict><key>tile-type</key><string>directory-tile</string></dict>'
-
-        # Restart dock to apply changes
-        killall Dock
-      '';
 
       # The platform the configuration will be used on.
       nixpkgs.hostPlatform = "aarch64-darwin";

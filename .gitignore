@@ -1,0 +1,14 @@
+# Nix build artifacts
+result
+result-*
+
+# macOS
+.DS_Store
+
+# Editor files
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
