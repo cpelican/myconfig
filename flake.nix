@@ -61,8 +61,6 @@
       environment.variables.EDITOR = "cursor";
       environment.variables.VISUAL = "cursor";
 
-      # Git is already included in systemPackages
-      # Git configuration can be done through ~/.gitconfig or environment variables
 
       # Set Warp as default terminal application and Chrome as default browser
       system.activationScripts.setDefaultTerminal = ''
@@ -163,6 +161,32 @@
         sudo -u carolinepellet defaults read com.apple.dock persistent-apps | grep '_CFURLString' | grep -o '/[^"]*' | sort
         
         echo "Custom applications setup complete!"
+        
+        echo "Setting up Git configuration..."
+        
+        # Set up Git config for the user (run as user with proper home directory)
+        sudo -u carolinepellet -H git config --global init.defaultBranch main
+        sudo -u carolinepellet -H git config --global pull.rebase false
+        sudo -u carolinepellet -H git config --global push.autoSetupRemote true
+        sudo -u carolinepellet -H git config --global core.editor cursor
+        sudo -u carolinepellet -H git config --global core.autocrlf input
+        sudo -u carolinepellet -H git config --global color.ui auto
+        sudo -u carolinepellet -H git config --global branch.autosetupmerge always
+        sudo -u carolinepellet -H git config --global branch.autosetuprebase always
+        
+        # Git aliases
+        sudo -u carolinepellet -H git config --global alias.st status
+        sudo -u carolinepellet -H git config --global alias.co checkout
+        sudo -u carolinepellet -H git config --global alias.br branch
+        sudo -u carolinepellet -H git config --global alias.ci commit
+        sudo -u carolinepellet -H git config --global alias.unstage "reset HEAD --"
+        sudo -u carolinepellet -H git config --global alias.last "log -1 HEAD"
+        sudo -u carolinepellet -H git config --global alias.visual "!gitk"
+        sudo -u carolinepellet -H git config --global alias.lg "log --oneline --decorate --graph"
+        sudo -u carolinepellet -H git config --global alias.joli "log --oneline --decorate --graph --all"
+        sudo -u carolinepellet -H git config --global alias.cleanup "!git branch --merged | grep -v '\\*\\|main\\|develop' | xargs -n 1 git branch -d"
+        
+        echo "Git configuration complete!"
       '';
 
 
