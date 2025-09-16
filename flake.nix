@@ -24,7 +24,6 @@
         pkgs.poetry # Poetry package manager
         pkgs.warp-terminal # Warp terminal
         pkgs.slack # Slack
-        pkgs.teams # Teams
         pkgs.code-cursor # Cursor IDE
         pkgs.git # Git
         pkgs.postman # Postman
@@ -139,7 +138,6 @@
           '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Warp.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>' \
           '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Cursor.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>' \
           '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Slack.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>' \
-          '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Teams.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>' \
           '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Postman.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>'
         
         echo "Dock applications configured"
