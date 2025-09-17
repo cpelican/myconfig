@@ -1,5 +1,9 @@
 {
   description = "My config for macos";
+  # MANUALLY INSTALL
+  # - fleet
+  # - asdf (can be installed with brew)
+  # - orbstack (can be installed with brew)
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -17,10 +21,9 @@
         pkgs.lazygit # Git TUI
         pkgs.pyenv # Python version manager
         pkgs.gh # GitHub CLI
-        # pkgs.bitwarden-cli # Bitwarden CLI (currently broken)
         pkgs.kubectl # Kubernetes CLI
         pkgs.curl # Command line tool for transferring data with URL syntax
-        pkgs.asdf # asdf version manager
+        # pkgs.asdf-vm # download an old version of asdf
         pkgs.poetry # Poetry package manager
         pkgs.warp-terminal # Warp terminal
         pkgs.slack # Slack
