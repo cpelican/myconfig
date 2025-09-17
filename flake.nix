@@ -28,6 +28,8 @@
         pkgs.git # Git
         pkgs.postman # Postman
         pkgs.google-chrome # Google Chrome
+        pkgs.aws-vault # AWS Vault for secure AWS credential management
+        pkgs.awscli2 # AWS CLI v2
       ];
 
       # allowUnfree is required to install some packages that are not "free" software.
@@ -41,7 +43,7 @@
 
       # Create /etc/zshrc that loads the nix-darwin environment.
       programs.zsh.enable = true;
-      
+
 
       environment.shellAliases = {
         atoka = "cd $HOME/Documents/repos/atoka-revenge";
@@ -67,7 +69,7 @@
         defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers -array-add '{LSHandlerContentType=public.unix-executable;LSHandlerRoleAll=com.warp.Warp;}'
         defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers -array-add '{LSHandlerURLScheme=ssh;LSHandlerRoleAll=com.warp.Warp;}'
         defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers -array-add '{LSHandlerURLScheme=ssh+file;LSHandlerRoleAll=com.warp.Warp;}'
-        
+
         # Set Chrome as default browser
         defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers -array-add '{LSHandlerContentType=public.html;LSHandlerRoleAll=com.google.Chrome;}'
         defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers -array-add '{LSHandlerContentType=public.xhtml;LSHandlerRoleAll=com.google.Chrome;}'
@@ -75,7 +77,7 @@
         defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers -array-add '{LSHandlerURLScheme=https;LSHandlerRoleAll=com.google.Chrome;}'
         defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers -array-add '{LSHandlerURLScheme=ftp;LSHandlerRoleAll=com.google.Chrome;}'
         defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers -array-add '{LSHandlerURLScheme=ftps;LSHandlerRoleAll=com.google.Chrome;}'
-        
+
         # Refresh Launch Services
         /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -kill -r -domain local -domain system -domain user
       '';
@@ -96,7 +98,7 @@
       # Create symlinks for applications in /Applications/ and configure dock
       system.activationScripts.postActivation.text = ''
         echo "Setting up custom applications..."
-        
+
         # Create symlinks from /Applications/Nix Apps/ to /Applications/
         echo "Creating application symlinks..."
         for app in "/Applications/Nix Apps/"*.app; do
@@ -112,24 +114,24 @@
             fi
           fi
         done
-        
+
         # Wait for symlinks to be created
         sleep 2
-        
+
         echo "Configuring dock applications..."
-        
+
         # Configure dock directly with the exact commands that work
         echo "Clearing existing dock configuration..."
         sudo -u carolinepellet defaults delete com.apple.dock persistent-apps 2>/dev/null || true
         sudo -u carolinepellet defaults delete com.apple.dock persistent-others 2>/dev/null || true
-        
+
         echo "Creating new dock configuration..."
         sudo -u carolinepellet defaults write com.apple.dock persistent-apps -array
         sudo -u carolinepellet defaults write com.apple.dock persistent-others -array
-        
+
         # Wait for user session to be ready
         sleep 3
-        
+
         echo "Setting dock applications..."
         # Set all dock apps at once to avoid duplicates
         sudo -u carolinepellet defaults write com.apple.dock persistent-apps -array \
@@ -139,29 +141,29 @@
           '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Cursor.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>' \
           '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Slack.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>' \
           '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/Postman.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>'
-        
+
         echo "Dock applications configured"
-        
-        
+
+
         # Wait a moment for all commands to complete
         sleep 1
-        
+
         echo "Restarting dock..."
         sudo -u carolinepellet killall Dock
-        
+
         echo "Waiting for dock to restart..."
         sleep 3
-        
-        
+
+
         echo "Final verification..."
         sleep 2
         echo "Apps in dock: $(sudo -u carolinepellet defaults read com.apple.dock persistent-apps | grep -c '_CFURLString')"
         sudo -u carolinepellet defaults read com.apple.dock persistent-apps | grep '_CFURLString' | grep -o '/[^"]*' | sort
-        
+
         echo "Custom applications setup complete!"
-        
+
         echo "Setting up Git configuration..."
-        
+
         # Set up Git config for the user (run as user with proper home directory)
         sudo -u carolinepellet -H git config --global init.defaultBranch main
         sudo -u carolinepellet -H git config --global pull.rebase false
@@ -171,7 +173,7 @@
         sudo -u carolinepellet -H git config --global color.ui auto
         sudo -u carolinepellet -H git config --global branch.autosetupmerge always
         sudo -u carolinepellet -H git config --global branch.autosetuprebase always
-        
+
         # Git aliases
         sudo -u carolinepellet -H git config --global alias.st status
         sudo -u carolinepellet -H git config --global alias.co checkout
@@ -183,8 +185,52 @@
         sudo -u carolinepellet -H git config --global alias.lg "log --oneline --decorate --graph"
         sudo -u carolinepellet -H git config --global alias.joli "log --oneline --decorate --graph --all"
         sudo -u carolinepellet -H git config --global alias.cleanup "!git branch --merged | grep -v '\\*\\|main\\|develop' | xargs -n 1 git branch -d"
-        
+
         echo "Git configuration complete!"
+
+        echo "Setting up Cursor preferences..."
+
+        # Cursor uses its own settings.json file, not macOS defaults
+        CURSOR_SETTINGS_FILE="/Users/carolinepellet/Library/Application Support/Cursor/User/settings.json"
+
+        if [ -f "$CURSOR_SETTINGS_FILE" ]; then
+          echo "Found Cursor settings file: $CURSOR_SETTINGS_FILE"
+
+          # Create a comprehensive settings.json for Cursor
+          sudo -u carolinepellet tee "$CURSOR_SETTINGS_FILE" > /dev/null << 'EOF'
+{
+    "window.commandCenter": true,
+    "workbench.colorTheme": "Default Dark+",
+    "workbench.preferredDarkColorTheme": "Default Dark+",
+    "workbench.preferredLightColorTheme": "Default Light+",
+    "editor.fontSize": 14,
+    "editor.fontFamily": "'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace",
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.wordWrap": "on",
+    "editor.minimap.enabled": true,
+    "editor.lineNumbers": "on",
+    "editor.rulers": [80, 120],
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 1000,
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": true,
+    "terminal.integrated.fontSize": 14,
+    "terminal.integrated.fontFamily": "'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace",
+    "git.enableSmartCommit": true,
+    "git.confirmSync": false,
+    "git.autofetch": true,
+    "extensions.autoUpdate": true,
+    "extensions.autoCheckUpdates": true
+}
+EOF
+
+          echo "Cursor preferences configured successfully in settings.json"
+        else
+          echo "Cursor settings file not found, skipping preferences setup"
+        fi
+
       '';
 
 
