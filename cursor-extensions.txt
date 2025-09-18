@@ -1,0 +1,17 @@
+antiantisepticeye.vscode-color-picker
+anysphere.cursorpyright
+dart-code.dart-code
+dart-code.flutter
+eamodio.gitlens
+jnoortheen.nix-ide
+k--kato.intellij-idea-keybindings
+ms-python.debugpy
+ms-python.isort
+ms-python.python
+ms-toolsai.jupyter
+naumovs.color-highlight
+prisma.prisma
+redhat.vscode-yaml
+rvest.vs-code-prettier-eslint
+svelte.svelte-vscode
+yy0931.vscode-sqlite3-editor
