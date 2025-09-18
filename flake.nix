@@ -4,6 +4,8 @@
   # - fleet
   # - asdf (can be installed with brew)
   # - orbstack (can be installed with brew)
+  # Abilitare firewall
+  # terminal: fdesetup status -extended -verbose
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
