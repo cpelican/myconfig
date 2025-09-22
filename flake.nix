@@ -35,6 +35,7 @@
         pkgs.google-chrome # Google Chrome
         pkgs.aws-vault # AWS Vault for secure AWS credential management
         pkgs.awscli2 # AWS CLI v2
+        pkgs.gitflow # Gitflow for git
       ];
 
       # allowUnfree is required to install some packages that are not "free" software.

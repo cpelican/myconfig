@@ -12,3 +12,5 @@ result-*
 
 # Temporary files
 *.tmp
+
+flake.lock
