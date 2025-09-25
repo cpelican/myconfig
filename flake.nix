@@ -36,6 +36,7 @@
         pkgs.aws-vault # AWS Vault for secure AWS credential management
         pkgs.awscli2 # AWS CLI v2
         pkgs.gitflow # Gitflow for git
+        pkgs.postgresql # PostgreSQL
       ];
 
       # allowUnfree is required to install some packages that are not "free" software.
